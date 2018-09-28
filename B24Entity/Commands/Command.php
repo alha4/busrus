@@ -25,4 +25,3 @@ abstract class Command {
 
  abstract public function execute($request);
 } 
-?>

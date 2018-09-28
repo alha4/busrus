@@ -29,7 +29,7 @@ class Contractor extends Command  {
    $arCompany = array(
      "TITLE" => $contractor['Название'], 
      "PHONE" => $this->getCompanyPhone($contractor['Телефон'], $company_id),
-     "EMAIL" => array(array("VALUE" => $this->emailParse($contractor['Email']), 'VALUE_TYPE' => 'WORK')),
+     "EMAIL" => $this->email($contractor['Email']),
      "ASSIGNED_BY_ID"    => $contractor['ИДОтветственный'] ? : DEFAULT_ASSIGNED,
      "UF_CRM_1526459919" => $contractor['ИНН'],
      "UF_CRM_1526459960" => $contractor['КПП'],
@@ -45,15 +45,15 @@ class Contractor extends Command  {
 
    if($company_id) {
 
-     $arCompany["EMAIL"] = array(array("ID" => $this->getEmailID("company", $company_id),"VALUE" => $this->emailParse($contractor['Email'])));
-
+     $arCompany["EMAIL"] = $this->getEntityEmail("company", $company_id, $contractor['Email']);
+    
      if($this->updateCompany($company_id, $arCompany)) {
 
        $contacts = $request['Контрагент']['КонтактныеЛица']; 
 
        foreach($contacts as $contact) {
 
-         $ID = $this->getContact($contact['CODE']);
+         $ID = $this->getContactID($contact['CODE']);
 
          $arContact = array(
            "COMPANY_ID"        => $company_id,
@@ -65,7 +65,7 @@ class Contractor extends Command  {
            "ASSIGNED_BY_ID"    => $contractor['ИДОтветственный'] ? : DEFAULT_ASSIGNED,
            "PHONE"             => $this->getContactPhone($contact['Телефон'], $ID),
            "UF_CRM_1536578561" => $this->encodePhone($contact['Телефон'],'contact', $ID),
-           "EMAIL"             => array(array("VALUE" => $this->emailParse($contact['Email']), 'VALUE_TYPE' => 'WORK')),
+           "EMAIL"             => $this->email($contact['Email']),
            "COMMENTS"          => $contact['Комментарий']
          );
 
@@ -75,8 +75,8 @@ class Contractor extends Command  {
         
          } else {
 
-           $arContact["EMAIL"] = array(array("ID" => $this->getEmailID("contact", $ID),"VALUE" => $this->emailParse($contact['Email'])));
-         
+           $arContact["EMAIL"] = $this->getEntityEmail("contact", $ID, $contact['Email']);
+ 
            $this->updateContact($ID,$arContact);
        
         } 
@@ -98,7 +98,7 @@ class Contractor extends Command  {
 
       foreach($contacts as $contact) {
 
-       $ID = $this->getContact($contact['CODE']);
+       $ID = $this->getContactID($contact['CODE']);
 
        $arContact = array(
           "COMPANY_ID"        => $company_id,
@@ -110,8 +110,8 @@ class Contractor extends Command  {
           "ASSIGNED_BY_ID"    => $contractor['ИДОтветственный']  ? : DEFAULT_ASSIGNED,
           "PHONE"             => $this->getContactPhone($contact['Телефон'], $ID),
           "UF_CRM_1536578561" => $this->encodePhone($contact['Телефон'],'contact', $ID),
-          "EMAIL" => array(array("VALUE" => $this->emailParse($contact['Email']), 'VALUE_TYPE' => 'WORK')),
-          "COMMENTS" => $contact['Комментарий']
+          "EMAIL"             => $this->email($contact['Email']),
+          "COMMENTS"          => $contact['Комментарий']
        );
 
        if(!$ID) {
@@ -124,8 +124,8 @@ class Contractor extends Command  {
           
        } else {
 
-          $arContact["EMAIL"] = array(array("ID" => $this->getEmailID("contact", $ID),"VALUE" => $this->emailParse($contact['Email'])));
-
+          $arContact["EMAIL"] = $this->getEntityEmail("contact", $ID, $contact['Email']);
+        
           if(!$this->updateContact($ID, $arContact)) {
 
              Logger::log(self::$CONTACT_ERRORS);
@@ -143,24 +143,5 @@ class Contractor extends Command  {
    return array("ERROR" => self::$COMPANY_ERRORS);
 
   }
- }
-
- private function getEmailID($entity, $entityID) {
-
-  $queryData = array(
-     "order"  => array("ID" => "DESC"),
-     "filter" =>  array(
-       "ID"    => $entityID
-      ),
-     "select" => array("EMAIL") 
-  );
-
-  $entity = strtoupper($entity);
-  $entity.="_LIST";
-
-  $result = $this->request(self::$$entity, $queryData);
-
-  return array_pop($result)['EMAIL'][0]['ID'] ? : false;
-
  }
 }

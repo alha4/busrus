@@ -7,12 +7,11 @@ $path = $_SERVER['DOCUMENT_ROOT']."/{$class}.php";
 
 if(file_exists($path)) {
    
-    require_once $path;
+   require_once $path;
 
 } else {
-    throw new Exception("file $path not found");
- }
+    
+   throw new Exception("file $path not found");
 
+}
 });
-
-?>

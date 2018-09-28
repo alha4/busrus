@@ -12,4 +12,3 @@ final class JsonEncoder implements IEncoder {
    }
 
 }
-?>

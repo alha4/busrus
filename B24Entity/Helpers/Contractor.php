@@ -1,4 +1,4 @@
-<?
+<?php
  namespace B24Entity\Helpers;
 
  use \B24Entity\Helpers\IContractor;
@@ -43,7 +43,7 @@
   
  }
 
- private function updateCompany($id,array $fields) {
+ private function updateCompany($id, array $fields) {
 
    $data = array(
      "id"      => $id,
@@ -64,17 +64,15 @@
 
  }
 
- private function getContact($code) {
+ private function getCompanyID($code) {
 
   $queryData = array(
-     "order"  => array("UF_CRM_1534925895" => "DESC"),
-     "filter" =>  array(
-       "UF_CRM_1534925895" => $code
-      ),
+     "order"  => array("ID" => "DESC"),
+     "filter" => array("UF_CRM_1534925547" => $code), 
      "select" => array("ID") 
   );
 
-  $result = $this->request(self::$CONTACT_LIST, $queryData);
+  $result = $this->request(self::$COMPANY_LIST, $queryData);
 
   return array_pop($result)['ID'] ? : false;
 
@@ -121,27 +119,29 @@
 
  }
 
- private function getCompanyID($code) {
+ private function getContactID($code) {
 
   $queryData = array(
-     "order"  => array("ID" => "DESC"),
-     "filter" => array("UF_CRM_1534925547" => $code), 
+     "order"  => array("UF_CRM_1534925895" => "DESC"),
+     "filter" =>  array(
+       "UF_CRM_1534925895" => $code
+      ),
      "select" => array("ID") 
   );
 
-  $result = $this->request(self::$COMPANY_LIST, $queryData);
+  $result = array_pop($this->request(self::$CONTACT_LIST, $queryData));
 
-  return array_pop($result)['ID'] ? : false;
+  return $result['ID'] ? : false;
 
  }
- 
+
  private function getCompanyPhone(array $phones, $entityID) {
 
   $new_phones = [];
 
   if(count($phones) == 0) {
 
-    return $this->clearAllPhone('company', $entityID);
+     return $this->clearAllPhone('company', $entityID);
 
   }
 
@@ -406,7 +406,12 @@
 
   foreach($phones as $phone) {
 
-    $arPhones[] = json_encode( array("ID" => $phone['ID'], "VALUE" => $this->phoneParse($phone['VALUE']), "TYPE" => IContractor::PHONE_TYPES[$phone["TYPE"]]) );
+    $arPhones[] = json_encode(array(
+                     "ID"    => $phone['ID'],
+                     "VALUE" => $this->phoneParse($phone['VALUE']), 
+                     "TYPE"  => IContractor::PHONE_TYPES[$phone["TYPE"]]
+                   ) 
+                  );
 
   }
   
@@ -428,6 +433,37 @@
   return $email;
 
  } 
+
+ private function email($email, $type = 'WORK') {
+
+   return array(array("VALUE" => $this->emailParse($email), 'VALUE_TYPE' => $type));
+
+ }
+
+ private function getEmailID($entity, $entityID) {
+
+  $queryData = array(
+     "order"  => array("ID" => "DESC"),
+     "filter" =>  array(
+       "ID"    => $entityID
+      ),
+     "select" => array("EMAIL") 
+  );
+
+  $entity = strtoupper($entity);
+  $entity.="_LIST";
+
+  $result = $this->request(self::$$entity, $queryData);
+
+  return array_pop($result)['EMAIL'][0]['ID'] ? : false;
+
+ }
+
+ private function getEntityEmail($entity, $id, $email) {
+
+  return array(array("ID" => $this->getEmailID($entity, $id), "VALUE" => $this->emailParse($email)));
+  
+ }
 
  private function phoneParse($phone) { 
   

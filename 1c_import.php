@@ -59,5 +59,3 @@ try {
 
   echo json_encode(array("Line" => $err->getLine(),'file' => $err->getFile(),'message' => $err->getMessage()));
 }
-
-?>

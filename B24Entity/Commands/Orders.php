@@ -25,6 +25,8 @@ class Orders extends Command  {
                                'Отменен'           => 'LOSE' 
                              ];
 
+ const DEFAULT_STATUS = 'NEW';                            
+
  use \B24Entity\Helpers\Contractor;
 
  public function execute($request) {
@@ -91,7 +93,7 @@ class Orders extends Command  {
       $company_id = $this->addCompany(array(
         "TITLE" => $contractor['Название'], 
         "PHONE" => $this->getCompanyPhone($contractor['Телефон'], $company_id),
-        "EMAIL" => array(array("VALUE" => $this->emailParse($contractor['Email']), 'VALUE_TYPE' => 'WORK')),
+        "EMAIL" => $this->email($contractor['Email']),
         "ASSIGNED_BY_ID"    => $contractor['ИДОтветственный'] ? : DEFAULT_ASSIGNED,
         "UF_CRM_1526459919" => $contractor['ИНН'],
         "UF_CRM_1526459960" => $contractor['КПП'],
@@ -121,7 +123,7 @@ class Orders extends Command  {
 
    foreach($contacts as $contact) {
 
-     $ID = $this->getContact($contact['CODE']);
+     $ID = $this->getContactID($contact['CODE']);
 
      $arContact = array(
        "COMPANY_ID"  => $company_id,
@@ -132,8 +134,8 @@ class Orders extends Command  {
        "ASSIGNED_BY_ID"    => $contractor['ИДОтветственный']  ? : DEFAULT_ASSIGNED,
        "PHONE"             => $this->getContactPhone($contact['Телефон'], $ID),
        "UF_CRM_1536578561" => $this->encodePhone($contact['Телефон'], 'contact', $ID),
-       "EMAIL"       => array(array("VALUE" => $this->emailParse($contact['Email']), 'VALUE_TYPE' => 'WORK')),
-       "COMMENTS"    => $contact['Комментарий']
+       "EMAIL"             => $this->email($contact['Email']),
+       "COMMENTS"          => $contact['Комментарий']
      );
 
      if(!$ID) {
@@ -145,6 +147,8 @@ class Orders extends Command  {
         }
         
      } else {
+
+        $arContact["EMAIL"] = $this->getEntityEmail("contact", $ID, $contact['Email']);
 
         if(!$this->updateContact($ID, $arContact)) {
 
@@ -209,6 +213,26 @@ class Orders extends Command  {
 
  }
 
+ private function getDealID($code) {
+
+  $queryData = array(
+     "order"  => array("TITLE" => "DESC"),
+     "filter" => array("TITLE" => $code),
+     "select" => array("ID") 
+  );
+
+  $result = $this->request(self::$DEAL_LIST, $queryData);
+
+  return array_pop($result)['ID'] ? : false;
+
+ } 
+
+ private function getStatus($stage) {
+
+   return self::$MAP_STATUS[$stage] ? : self::DEFAULT_STATUS;
+
+ }
+
  private function updateStatus($request) {
 
   $data = array(
@@ -233,26 +257,6 @@ class Orders extends Command  {
 
   return $result['error_description'];
  
- }
-
- private function getDealID($code) {
-
-  $queryData = array(
-     "order"  => array("TITLE" => "DESC"),
-     "filter" => array("TITLE" => $code),
-     "select" => array("ID") 
-  );
-
-  $result = $this->request(self::$DEAL_LIST, $queryData);
-
-  return array_pop($result)['ID'] ? : false;
-
- } 
-
- private function getStatus($stage) {
-
-  return self::$MAP_STATUS[$stage] ? : 'NEW';
-
  }
 
  private function addProduct($deal_id, array $items) {
