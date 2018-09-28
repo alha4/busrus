@@ -14,7 +14,7 @@ class Orders extends Command  {
 
  private static $PRODUCT_ADD  = 'crm.deal.productrows.set.json';
 
- private static $DEAL_ERRORS  = [];
+ private static $DEAL_ERRORS    = [];
 
  private static $PRODUCT_ERRORS = [];
 
@@ -23,7 +23,7 @@ class Orders extends Command  {
                                'Частично выполнен' => 'PREPAYMENT_INVOICE', 
                                'Выполнен'          => 'WON', 
                                'Отменен'           => 'LOSE' 
-                             ];
+                              ];
 
  const DEFAULT_STATUS = 'NEW';                            
 
@@ -107,77 +107,74 @@ class Orders extends Command  {
         "COMMENTS"          => $contractor['Комментарий']
       ));
 
-     if($company_id) {
+      if($company_id) {
 
-       $arOrder['COMPANY_ID'] = $company_id;  
- 
+        $arOrder['COMPANY_ID'] = $company_id; 
+       
+        $contacts = $contractor['КонтактныеЛица']; 
+
+        foreach($contacts as $contact) {
+
+          $ID = $this->getContactID($contact['CODE']);
+
+          $arContact = array(
+            "COMPANY_ID"  => $company_id,
+            "NAME"        => $contact['Имя'],
+            "LAST_NAME"   => $contact['Фамилия'],
+            "SECOND_NAME" => $contact['Отчество'],
+            "UF_CRM_1534925895" => $contact['CODE'],
+            "ASSIGNED_BY_ID"    => $contractor['ИДОтветственный']  ? : DEFAULT_ASSIGNED,
+            "PHONE"             => $this->getContactPhone($contact['Телефон'], $ID),
+            "UF_CRM_1536578561" => $this->encodePhone($contact['Телефон'], 'contact', $ID),
+            "EMAIL"             => $this->email($contact['Email']),
+            "COMMENTS"          => $contact['Комментарий']
+          );
+
+          if(!$ID) {
+      
+           if(!$this->addContact($arContact)) {
+
+             Logger::log(self::$CONTACT_ERRORS);
+
+           }
+        
+          } else {
+
+            $arContact["EMAIL"] = $this->getEntityEmail("contact", $ID, $contact['Email']);
+
+            if(!$this->updateContact($ID, $arContact)) {
+
+              Logger::log(self::$CONTACT_ERRORS);
+
+            }
+         } 
+       }
      } else {
 
        Logger::log(self::$COMPANY_ERRORS);
 
-     }
-
+    }
    } 
-
-   $contacts = $contractor['КонтактныеЛица']; 
-
-   foreach($contacts as $contact) {
-
-     $ID = $this->getContactID($contact['CODE']);
-
-     $arContact = array(
-       "COMPANY_ID"  => $company_id,
-       "NAME"        => $contact['Имя'],
-       "LAST_NAME"   => $contact['Фамилия'],
-       "SECOND_NAME" => $contact['Отчество'],
-       "UF_CRM_1534925895" => $contact['CODE'],
-       "ASSIGNED_BY_ID"    => $contractor['ИДОтветственный']  ? : DEFAULT_ASSIGNED,
-       "PHONE"             => $this->getContactPhone($contact['Телефон'], $ID),
-       "UF_CRM_1536578561" => $this->encodePhone($contact['Телефон'], 'contact', $ID),
-       "EMAIL"             => $this->email($contact['Email']),
-       "COMMENTS"          => $contact['Комментарий']
-     );
-
-     if(!$ID) {
-      
-        if(!$this->addContact($arContact)) {
-
-           Logger::log(self::$CONTACT_ERRORS);
-
-        }
-        
-     } else {
-
-        $arContact["EMAIL"] = $this->getEntityEmail("contact", $ID, $contact['Email']);
-
-        if(!$this->updateContact($ID, $arContact)) {
-
-           Logger::log(self::$CONTACT_ERRORS);
-
-        }
-       
-     } 
-   }
-   
-   $products = [];
-
-   foreach($request['Товары'] as $k=>$item) {
-
-     $products[] = array(
-       "PRODUCT_NAME" => $item['Номенклатура'],
-       "PRICE" =>        $item['Цена'],
-       "QUANTITY" =>     $item['Количество']
-     );
-
-   }
 
    $ID = $this->add($arOrder);
    
    if($ID) {
 
+    $products = [];
+
+    foreach($request['Товары'] as $k=>$item) {
+
+      $products[] = array(
+        "PRODUCT_NAME" => $item['Номенклатура'],
+        "PRICE"        => $item['Цена'],
+        "QUANTITY"     => $item['Количество']
+      );
+
+    }
+
     if($this->addProduct($ID, $products)) {
 
-        return array("STATUS"=>"OK","ERRORS" => array_merge(self::$COMPANY_ERRORS, self::$CONTACT_ERRORS));
+       return array("STATUS"=>"OK","ERRORS" => array_merge(self::$COMPANY_ERRORS, self::$CONTACT_ERRORS));
 
     }
     
